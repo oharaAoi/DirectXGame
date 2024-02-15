@@ -72,3 +72,25 @@ void WinApp::CreateGameWindow(){
 	// ウィンドウを表示する
 	ShowWindow(hwnd_, SW_SHOW);
 }
+
+//===============================================================================================================
+//	
+//===============================================================================================================
+bool WinApp::ProcessMessage(){
+	MSG msg{};
+	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	// 終了メッセージが来たらループを抜ける
+	if (msg.message != WM_QUIT) {
+		return true;
+	}
+
+	return false;
+}
+
+void WinApp::Finalize(){
+	CloseWindow(hwnd_);
+}

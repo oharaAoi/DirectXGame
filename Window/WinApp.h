@@ -42,10 +42,18 @@ public: // メンバ関数
 	void CreateGameWindow();
 
 	/// <summary>
+	/// メッセージの処理
+	/// </summary>
+	/// <returns>終了かどうか</returns>
+	bool ProcessMessage();
+
+	/// <summary>
 	/// ウィンドウハンドルの取得
 	/// </summary>
 	/// <returns></returns>
 	HWND GetHwnd() const { return hwnd_; }
+
+	void Finalize();
 
 private: // メンバ変数
 	// window関連
