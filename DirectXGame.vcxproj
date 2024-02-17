@@ -22,6 +22,9 @@
   <ItemGroup>
     <ClInclude Include="DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="Function\Convert.h" />
+    <ClInclude Include="Lib\Vector4.h" />
+    <ClInclude Include="Matrix.h" />
+    <ClInclude Include="Vector3.h" />
     <ClInclude Include="window\WinApp.h" />
   </ItemGroup>
   <ItemGroup>
@@ -79,7 +82,7 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\Lib\;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

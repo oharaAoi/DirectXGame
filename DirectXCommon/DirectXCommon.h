@@ -10,15 +10,8 @@
 #include <vector>
 
 #include "Function/Convert.h"
-
 #include "Window/WinApp.h"
-
-struct Vector4 {
-	float x;
-	float y;
-	float z;
-	float w;
-};
+#include "Vector4.h"
 
 /// <summary>
 /// DirectX汎用
@@ -35,59 +28,47 @@ public: // メンバ関数
 	/// <summary>
 	/// 初期化
 	/// </summary>
-	void Initialize(WinApp* win);
+	void Initialize(WinApp* win, int32_t backBufferWidth, int32_t backBufferHeight);
 
 
 private: // メンバ変数
 
 	// ウィンドウズアプリケーション管理
 	WinApp* winApp_;
+	int32_t kClientWidth_;
+	int32_t kClientHeight_;
 
 	ID3D12Debug1* debugController_ = nullptr;
 	ID3D12Device* device_ = nullptr;
-	// DXGIファクトリーの生成
 	IDXGIFactory7* dxgiFactory_ = nullptr;
 	IDXGIAdapter4* useAdapter_ = nullptr;
-
 	IDXGISwapChain4* swapChain_ = nullptr;
-
 	ID3D12CommandQueue* commandQueue_ = nullptr;
 	ID3D12CommandAllocator* commandAllocator_ = nullptr;
 	ID3D12GraphicsCommandList* commandList_ = nullptr;
 	ID3D12Resource* swapChainResources_[2] = { nullptr };
 	ID3D12DescriptorHeap* rtcDescriptorHeap_ = nullptr;
 	ID3D12Fence* fence_ = nullptr;
+	IDxcUtils* dxcUtils_ = nullptr;
+	IDxcCompiler3* dxcCompiler_ = nullptr;
+	ID3D12RootSignature* rootSigneture_ = nullptr;
+	IDxcIncludeHandler* includeHandler_ = nullptr;
+	ID3D12PipelineState* graphicsPipelineState_ = nullptr;
+	IDxcBlob* vertexShaderBlob_ = nullptr;
+	IDxcBlob* pixelShaderBlob_ = nullptr;
+	ID3DBlob* errorBlob_ = nullptr;
+	ID3D12Resource* vertexResource_ = nullptr;
+	ID3D12Resource* materialResource_ = nullptr;
 
 	uint64_t fenceValue_ = 0;
 	HANDLE fenceEvent_;
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc_;
-	// RTVを2つ作るのでディスクリプタを2つ用意
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles_[2];
-
 	D3D12_RESOURCE_BARRIER barrier_;
-
-	// DirectXShaderCompilerで使う ---------------------
-	IDxcUtils* dxcUtils_ = nullptr;
-	IDxcCompiler3* dxcCompiler_ = nullptr;
-
-	IDxcIncludeHandler* includeHandler_ = nullptr;
-
-	// PipelineStateOcject ----------------
-	ID3D12RootSignature* rootSigneture_ = nullptr;
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc_;
 	D3D12_BLEND_DESC blendDesc_;
 	D3D12_RASTERIZER_DESC rasterizerDesc_;
-	IDxcBlob* vertexShaderBlob_ = nullptr;
-	IDxcBlob* pixelShaderBlob_ = nullptr;
-	ID3DBlob* errorBlob_ = nullptr;
-
-	ID3D12PipelineState* graphicsPipelineState_ = nullptr;
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc_;
-
-
-	ID3D12Resource* vertexResource_ = nullptr;
-
-	//
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};
 	D3D12_VIEWPORT viewport_{};
 	D3D12_RECT scissorRect_{};
@@ -148,9 +129,20 @@ public: // メンバ関数(関数内の細かい関数)
 	/// </summary>
 	void CreateRTV();
 
+	/// <summary>
+	/// PSOの生成
+	/// </summary>
 	void CreatePSO();
 
+	/// <summary>
+	/// 頂点データの生成
+	/// </summary>
 	void CreateVertexResource();
+
+	/// <summary>
+	/// BufferResourceを作る関数
+	/// </summary>
+	ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes);
 
 	/// <summary>
 	/// RootSignatureの生成

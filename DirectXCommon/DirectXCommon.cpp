@@ -12,8 +12,7 @@ DirectXCommon* DirectXCommon::GetInstacne(){
 
 DirectXCommon::~DirectXCommon() {
 
-	CloseHandle(fenceEvent_);
-
+	materialResource_->Release();
 	// 
 	vertexResource_->Release();
 	graphicsPipelineState_->Release();
@@ -28,10 +27,11 @@ DirectXCommon::~DirectXCommon() {
 	dxcUtils_->Release();
 
 	//
+	CloseHandle(fenceEvent_);
 	fence_->Release();
-	rtcDescriptorHeap_->Release();
 	swapChainResources_[0]->Release();
 	swapChainResources_[1]->Release();
+	rtcDescriptorHeap_->Release();
 	swapChain_->Release();
 	commandList_->Release();
 	commandAllocator_->Release();
@@ -39,6 +39,7 @@ DirectXCommon::~DirectXCommon() {
 	device_->Release();
 	useAdapter_->Release();
 	dxgiFactory_->Release();
+
 #ifdef _DEBUG
 	debugController_->Release();
 #endif
@@ -56,9 +57,11 @@ DirectXCommon::~DirectXCommon() {
 /*=============================================================================================================================
 	初期化
 =============================================================================================================================*/
-void DirectXCommon::Initialize(WinApp* win){
+void DirectXCommon::Initialize(WinApp* win, int32_t backBufferWidth, int32_t backBufferHeight){
 	assert(win);
 	winApp_ = win;
+	kClientWidth_ = backBufferWidth;
+	kClientHeight_ = backBufferHeight;
 
 	// DirectXの初期化
 	InitializeDXGDevice();
@@ -285,7 +288,6 @@ void DirectXCommon::EndFrame(){
 	}
 
 	// ---------------------------------------------------
-
 	// 次フレーム用のコマンドリストを準備
 	hr = commandAllocator_->Reset();
 	assert(SUCCEEDED(hr));
@@ -319,6 +321,10 @@ void DirectXCommon::DrawCall() {
 	commandList_->IASetVertexBuffers(0, 1, &vertexBufferView_);
 	// 形状を設定。PSOに設定しているものとはまた別。
 	commandList_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	// 02_01 -------------------------
+	// マテリアルCBufferの場所を設定
+	commandList_->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+	// -------------------------------
 	// 描画
 	commandList_->DrawInstanced(3, 1, 0, 0);
 }
@@ -406,11 +412,20 @@ void DirectXCommon::CreateVertexResource(){
 	// 右下
 	vertexData[2] = { 0.5f, -0.5f, 0.0f, 1.0f };
 
+	// 02_01 -----------------------------------------------------------------------------------------
+	materialResource_ = CreateBufferResource(device_, sizeof(Vector4));
+	// マテリアルにデータを書き込む
+	Vector4* materialData = nullptr;
+	// 書き込むためのアドレスを取得
+	materialResource_->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
+	// 赤
+	*materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+
 	// ViewportとScissor ------------------------------------------------------------------------------
 	// ビューポート
 	// クライアント領域のサイズと一緒にして画面全体を表示
-	viewport_.Width = 1280;
-	viewport_.Height = 720;
+	viewport_.Width = static_cast<float>(kClientWidth_);
+	viewport_.Height = static_cast<float>(kClientHeight_);
 	viewport_.TopLeftX = 0;
 	viewport_.TopLeftY = 0;
 	viewport_.MinDepth = 0.0f;
@@ -419,12 +434,38 @@ void DirectXCommon::CreateVertexResource(){
 	// シザー矩形
 	// 基本的にビューポートと同じ矩形が構成されるようにする
 	scissorRect_.left = 0;
-	scissorRect_.right = 1280;
+	scissorRect_.right = static_cast<LONG>(kClientWidth_);
 	scissorRect_.top = 0;
-	scissorRect_.bottom = 720;
+	scissorRect_.bottom = static_cast<LONG>(kClientHeight_);
 }
 
 // ↓初期化に関するメンバ関数 ---------------------------------------------------------------------------------------------------------------------------
+
+ID3D12Resource* DirectXCommon::CreateBufferResource(ID3D12Device* device, size_t sizeInBytes) {
+	HRESULT hr = S_FALSE;
+	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
+	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	// 頂点リソースの設定
+	D3D12_RESOURCE_DESC vertexResourceDesc{};
+	// バッファリソース。テクスチャの場合はまた別の設定をする
+	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	vertexResourceDesc.Width = sizeof(sizeInBytes) * 3;
+	// バッファの場合がこれらは1にする決まり
+	vertexResourceDesc.Height = 1;
+	vertexResourceDesc.DepthOrArraySize = 1;
+	vertexResourceDesc.MipLevels = 1;
+	vertexResourceDesc.SampleDesc.Count = 1;
+	// バッファの場合はこれにする決まり
+	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	// 実際に頂点リソースを作る
+	ID3D12Resource* vertexResource = nullptr;
+	hr = device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE,
+		&vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
+	assert(SUCCEEDED(hr));
+
+	return vertexResource;
+}
+
 /// <summary>
 /// コマンドを生成
 /// </summary>
@@ -451,10 +492,10 @@ void DirectXCommon::CreateCommand() {
 /// </summary>
 void DirectXCommon::SwapChainCreate() {
 	HRESULT hr = S_FALSE;
-	
+	swapChain_ = nullptr;
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
-	swapChainDesc.Width = 1280;										// 画面の幅。ウィンドウのクライアント領域を同じ物にしておく
-	swapChainDesc.Height = 720;										// 画面の高さ。ウィンドウのクライアント領域を同じ物にしておく
+	swapChainDesc.Width = kClientWidth_;							// 画面の幅。ウィンドウのクライアント領域を同じ物にしておく
+	swapChainDesc.Height = kClientHeight_;							// 画面の高さ。ウィンドウのクライアント領域を同じ物にしておく
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;				// 色の形式
 	swapChainDesc.SampleDesc.Count = 1;								// マルチサンプルしない
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;	// 描画のターゲットとして利用する
@@ -513,6 +554,18 @@ ID3D12RootSignature* DirectXCommon::CreateRootSignature(){
 	HRESULT hr = S_FALSE;
 	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	// 02_01 -------------------------------------
+	// RootParameter作成。複数設定できるので配列。今回は結果1つだけなので長さの1の配列
+	D3D12_ROOT_PARAMETER rootParameters[1] = {};
+	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;	// CBVを使う
+	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;	// PixelShaderで使う
+	rootParameters[0].Descriptor.ShaderRegister = 0;					// レジスタ番号0とバインド
+	descriptionRootSignature.pParameters = rootParameters;				// ルートパラメータ配列へのポインタ
+	descriptionRootSignature.NumParameters = _countof(rootParameters);	// 配列の長さ
+
+	// -------------------------------------------
+
 	// シリアライズしてバイナリにする
 	ID3DBlob* signatureBlob = nullptr;
 	hr = D3D12SerializeRootSignature(&descriptionRootSignature,
@@ -608,7 +661,7 @@ IDxcBlob* DirectXCommon::CompilerShader(
 	HRESULT hr = dxcUtils->LoadFile(filePath.c_str(), nullptr, &shaderSource);
 	// 読めなかったら止める
 	assert(SUCCEEDED(hr));
-	DxcBuffer shaderSourceBuffer;
+	DxcBuffer shaderSourceBuffer{};
 	shaderSourceBuffer.Ptr = shaderSource->GetBufferPointer();
 	shaderSourceBuffer.Size = shaderSource->GetBufferSize();
 	shaderSourceBuffer.Encoding = DXC_CP_UTF8;

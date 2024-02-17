@@ -21,7 +21,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	DirectXCommon* sDirectX = nullptr;
 	assert(!sDirectX);
 	sDirectX = DirectXCommon::GetInstacne();
-	sDirectX->Initialize(sWinApp);
+	sDirectX->Initialize(sWinApp, 1280, 720);
 
 	//==========================================================
 	//	メインループ
@@ -36,7 +36,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		sDirectX->EndFrame();
 	}
 
-	sWinApp->Finalize();
+	/*sWinApp->Finalize();*/
 	return 0;
 }
 
