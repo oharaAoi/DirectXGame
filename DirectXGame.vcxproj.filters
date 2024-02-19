@@ -39,6 +39,9 @@
     <ClCompile Include="Function\Convert.cpp">
       <Filter>Function</Filter>
     </ClCompile>
+    <ClCompile Include="MyMatrix.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="window\WinApp.h">
@@ -49,6 +52,18 @@
     </ClInclude>
     <ClInclude Include="Function\Convert.h">
       <Filter>Function</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Vector3.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Vector4.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="MyMatrix.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Matrix4x4.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

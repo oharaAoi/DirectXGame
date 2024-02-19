@@ -17,14 +17,16 @@
     <ClCompile Include="DirectXCommon\DirectXCommon.cpp" />
     <ClCompile Include="Function\Convert.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MyMatrix.cpp" />
     <ClCompile Include="window\WinApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="Function\Convert.h" />
+    <ClInclude Include="Lib\Matrix4x4.h" />
+    <ClInclude Include="Lib\Vector3.h" />
     <ClInclude Include="Lib\Vector4.h" />
-    <ClInclude Include="Matrix.h" />
-    <ClInclude Include="Vector3.h" />
+    <ClInclude Include="MyMatrix.h" />
     <ClInclude Include="window\WinApp.h" />
   </ItemGroup>
   <ItemGroup>
