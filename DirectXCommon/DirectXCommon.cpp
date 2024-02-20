@@ -12,8 +12,8 @@ DirectXCommon* DirectXCommon::GetInstacne(){
 
 DirectXCommon::~DirectXCommon() {
 
+	wvpResource_->Release();
 	materialResource_->Release();
-	// 
 	vertexResource_->Release();
 	graphicsPipelineState_->Release();
 	rootSigneture_->Release();
@@ -44,6 +44,8 @@ DirectXCommon::~DirectXCommon() {
 	debugController_->Release();
 #endif
 
+	winApp_->Finalize();
+
 	// 
 	IDXGIDebug1* debug;
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
@@ -62,6 +64,10 @@ void DirectXCommon::Initialize(WinApp* win, int32_t backBufferWidth, int32_t bac
 	winApp_ = win;
 	kClientWidth_ = backBufferWidth;
 	kClientHeight_ = backBufferHeight;
+
+	// -----------------------------------
+	transform_ = { {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
+	// -----------------------------------
 
 	// DirectXの初期化
 	InitializeDXGDevice();
@@ -324,6 +330,8 @@ void DirectXCommon::DrawCall() {
 	// 02_01 -------------------------
 	// マテリアルCBufferの場所を設定
 	commandList_->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+	// 02_02 -------------------------
+	commandList_->SetGraphicsRootConstantBufferView(1, wvpResource_->GetGPUVirtualAddress());
 	// -------------------------------
 	// 描画
 	commandList_->DrawInstanced(3, 1, 0, 0);
@@ -421,6 +429,15 @@ void DirectXCommon::CreateVertexResource(){
 	// 赤
 	*materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 
+	// 02_02 -----------------------------------------------------------------------------------------
+	wvpResource_ = CreateBufferResource(device_, sizeof(Matrix4x4));
+
+	Matrix4x4* wvpData = nullptr;
+	wvpResource_->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
+	transform_.rotate.y += 0.03f;
+	Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scalel, transform_.rotate, transform_.translate);
+	*wvpData = worldMatrix;
+
 	// ViewportとScissor ------------------------------------------------------------------------------
 	// ビューポート
 	// クライアント領域のサイズと一緒にして画面全体を表示
@@ -446,10 +463,10 @@ ID3D12Resource* DirectXCommon::CreateBufferResource(ID3D12Device* device, size_t
 	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
 	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
 	// 頂点リソースの設定
-	D3D12_RESOURCE_DESC vertexResourceDesc{};
+	D3D12_RESOURCE_DESC vertexResourceDesc = {};
 	// バッファリソース。テクスチャの場合はまた別の設定をする
 	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	vertexResourceDesc.Width = sizeof(sizeInBytes) * 3;
+	vertexResourceDesc.Width = sizeInBytes * 3;
 	// バッファの場合がこれらは1にする決まり
 	vertexResourceDesc.Height = 1;
 	vertexResourceDesc.DepthOrArraySize = 1;
@@ -556,11 +573,17 @@ ID3D12RootSignature* DirectXCommon::CreateRootSignature(){
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	// 02_01 -------------------------------------
-	// RootParameter作成。複数設定できるので配列。今回は結果1つだけなので長さの1の配列
-	D3D12_ROOT_PARAMETER rootParameters[1] = {};
+	// RootParameter作成。複数設定できるので配列。
+	D3D12_ROOT_PARAMETER rootParameters[2] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;	// CBVを使う
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;	// PixelShaderで使う
 	rootParameters[0].Descriptor.ShaderRegister = 0;					// レジスタ番号0とバインド
+
+	// 02_02 -------------------------------------
+	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	rootParameters[1].Descriptor.ShaderRegister = 0;
+
 	descriptionRootSignature.pParameters = rootParameters;				// ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);	// 配列の長さ
 
@@ -710,6 +733,17 @@ IDxcBlob* DirectXCommon::CompilerShader(
 	return shaderBlob;
 }
 
+/// <summary>
+/// 移動用のの頂点の生成
+/// </summary>
+void DirectXCommon::CreateWVPResource(const Matrix4x4& vpMatrix){
+	Matrix4x4* wvpData = nullptr;
+	wvpResource_->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
+	transform_.rotate.y += 0.03f;
+	Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scalel, transform_.rotate, transform_.translate);
+	Matrix4x4 wvpMatrix = Multiply(worldMatrix, vpMatrix);
+	*wvpData = wvpMatrix;
+}
 
 void DirectXCommon::Log(const std::string& message) {
 	OutputDebugStringA(message.c_str());

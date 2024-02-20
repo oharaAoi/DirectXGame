@@ -13,6 +13,10 @@
 #include "Window/WinApp.h"
 #include "Vector4.h"
 
+// lib
+#include "MyMatrix.h"
+#include "Transform.h"
+
 /// <summary>
 /// DirectX汎用
 /// </summary>
@@ -39,26 +43,27 @@ private: // メンバ変数
 	int32_t kClientHeight_;
 
 	ID3D12Debug1* debugController_ = nullptr;
-	ID3D12Device* device_ = nullptr;
 	IDXGIFactory7* dxgiFactory_ = nullptr;
 	IDXGIAdapter4* useAdapter_ = nullptr;
-	IDXGISwapChain4* swapChain_ = nullptr;
+	ID3D12Device* device_ = nullptr;
 	ID3D12CommandQueue* commandQueue_ = nullptr;
 	ID3D12CommandAllocator* commandAllocator_ = nullptr;
 	ID3D12GraphicsCommandList* commandList_ = nullptr;
-	ID3D12Resource* swapChainResources_[2] = { nullptr };
+	IDXGISwapChain4* swapChain_ = nullptr;
 	ID3D12DescriptorHeap* rtcDescriptorHeap_ = nullptr;
+	ID3D12Resource* swapChainResources_[2] = { nullptr };
 	ID3D12Fence* fence_ = nullptr;
 	IDxcUtils* dxcUtils_ = nullptr;
 	IDxcCompiler3* dxcCompiler_ = nullptr;
-	ID3D12RootSignature* rootSigneture_ = nullptr;
 	IDxcIncludeHandler* includeHandler_ = nullptr;
-	ID3D12PipelineState* graphicsPipelineState_ = nullptr;
 	IDxcBlob* vertexShaderBlob_ = nullptr;
 	IDxcBlob* pixelShaderBlob_ = nullptr;
 	ID3DBlob* errorBlob_ = nullptr;
+	ID3D12RootSignature* rootSigneture_ = nullptr;
+	ID3D12PipelineState* graphicsPipelineState_ = nullptr;
 	ID3D12Resource* vertexResource_ = nullptr;
 	ID3D12Resource* materialResource_ = nullptr;
+	ID3D12Resource* wvpResource_;
 
 	uint64_t fenceValue_ = 0;
 	HANDLE fenceEvent_;
@@ -72,6 +77,11 @@ private: // メンバ変数
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};
 	D3D12_VIEWPORT viewport_{};
 	D3D12_RECT scissorRect_{};
+
+	//
+
+	//
+	kTransform transform_;
 	
 public: // メンバ関数
 	DirectXCommon() = default;
@@ -180,6 +190,11 @@ public: // メンバ関数(関数内の細かい関数)
 	/// Shaderをコンパイルする
 	/// </summary>
 	void ShaderCompile();
+
+	/// <summary>
+	/// 
+	/// </summary>
+	void CreateWVPResource(const Matrix4x4& vpMatrix);
 
 	void Log(const std::string& message);
 };

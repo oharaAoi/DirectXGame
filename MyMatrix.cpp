@@ -134,7 +134,7 @@ void addScaledRow(Matrix4x4& matrix, int targetRow, int sourceRow, float scalar)
 /// 転置行列
 /// </summary>
 /// <param name="matrix"></param>
-Matrix4x4 Transpose(const Matrix4x4 matrix) {
+Matrix4x4 Transpose(const Matrix4x4& matrix) {
     Matrix4x4 result;
 
     for (int i = 0; i < 4; ++i) {
@@ -209,7 +209,7 @@ Matrix4x4 MakeScaleMatrix(const Vector3& scale) {
 /// </summary>
 /// <param name="radian"></param>
 /// <returns></returns>
-Matrix4x4 MakeRotateZMatrix(float radian) {
+Matrix4x4 MakeRotateZMatrix(const float& radian) {
     Matrix4x4 result{};
     result.m[0][0] = std::cos(radian);
     result.m[0][1] = std::sin(radian);
@@ -221,7 +221,7 @@ Matrix4x4 MakeRotateZMatrix(float radian) {
     return result;
 }
 
-Matrix4x4 MakeRotateXMatrix(float radian) {
+Matrix4x4 MakeRotateXMatrix(const float& radian) {
     Matrix4x4 result{};
     result.m[0][0] = 1;
     result.m[1][1] = std::cos(radian);
@@ -233,7 +233,7 @@ Matrix4x4 MakeRotateXMatrix(float radian) {
     return result;
 }
 
-Matrix4x4 MakeRotateYMatrix(float radian) {
+Matrix4x4 MakeRotateYMatrix(const float& radian) {
     Matrix4x4 result{};
     result.m[0][0] = std::cos(radian);
     result.m[0][2] = -std::sin(radian);
@@ -245,7 +245,7 @@ Matrix4x4 MakeRotateYMatrix(float radian) {
     return result;
 }
 
-Matrix4x4 MakeRotateXYZMatrix(Vector3 radian) {
+Matrix4x4 MakeRotateXYZMatrix(const Vector3& radian) {
     Matrix4x4 result{};
 
     result = Multiply(MakeRotateXMatrix(radian.x), Multiply(MakeRotateYMatrix(radian.y), MakeRotateZMatrix(radian.z)));
@@ -270,6 +270,21 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Ve
     scaleMatrix = MakeScaleMatrix(scale);
     rotateMatrix = MakeRotateXYZMatrix(rotate);
     translateMatrix = MakeTranslateMatrix(translate);
+
+    affineMatrix = Multiply(Multiply(scaleMatrix, rotateMatrix), translateMatrix);
+
+    return affineMatrix;
+}
+
+Matrix4x4 MakeAffineMatrix(const kTransform& transform) {
+    Matrix4x4 scaleMatrix{};
+    Matrix4x4 rotateMatrix{};
+    Matrix4x4 translateMatrix{};
+    Matrix4x4 affineMatrix{};
+
+    scaleMatrix = MakeScaleMatrix(transform.scalel);
+    rotateMatrix = MakeRotateXYZMatrix(transform.rotate);
+    translateMatrix = MakeTranslateMatrix(transform.translate);
 
     affineMatrix = Multiply(Multiply(scaleMatrix, rotateMatrix), translateMatrix);
 
@@ -307,7 +322,7 @@ Vector3 Transform(const Vector3& vector, const Matrix4x4& matrix) {
 /// <param name="nearClip"></param>
 /// <param name="farClip"></param>
 /// <returns></returns>
-Matrix4x4 MakeOrthograhicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip) {
+Matrix4x4 MakeOrthograhicMatrix(const float& left, const float& top, const float& right, const float& bottom, const float& nearClip, const float& farClip) {
     Matrix4x4 result{};
     result.m[0][0] = 2.0f / (right - left);
     result.m[1][1] = 2.0f / (top - bottom);
@@ -328,7 +343,7 @@ Matrix4x4 MakeOrthograhicMatrix(float left, float top, float right, float bottom
 /// <param name="nearClip"></param>
 /// <param name="farClip"></param>
 /// <returns></returns>
-Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) {
+Matrix4x4 MakePerspectiveFovMatrix(const float& fovY, const float& aspectRatio, const float& nearClip, const float& farClip) {
     Matrix4x4 result{};
 
     float tangent = fovY / 2.0f;
@@ -353,7 +368,7 @@ Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip
 /// <param name="minDepth"></param>
 /// <param name="maxDepth"></param>
 /// <returns></returns>
-Matrix4x4 MakeViewportMatrix(float left, float top, float width, float height, float minDepth, float maxDepth) {
+Matrix4x4 MakeViewportMatrix(const float& left, const float& top, const float& width, const float& height, const float& minDepth, const float& maxDepth) {
     Matrix4x4 result{};
     result.m[0][0] = width / 2.0f;
     result.m[1][1] = -height / 2.0f;
