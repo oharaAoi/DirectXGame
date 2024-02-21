@@ -1,5 +1,7 @@
 #include "WinApp.h"
 
+#include "ImGuiManager.h"
+
 WinApp* WinApp::GetInstance(){
     static WinApp instance;
     return &instance;
@@ -9,6 +11,11 @@ WinApp* WinApp::GetInstance(){
     ウィンドウプロシージャ
 ==========================================================================*/
 LRESULT CALLBACK WinApp::WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam){
+
+	if (ImGuiManager::ImGuiHandler(hwnd, msg, wparam, lparam)) {
+		return true;
+	}
+
 	// メッセージに応じてゲーム固有の処理を行う
 	switch (msg) {
 		// ウィンドウが破壊された

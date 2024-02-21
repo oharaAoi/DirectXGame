@@ -66,6 +66,9 @@ void DirectXCommon::Initialize(WinApp* win, int32_t backBufferWidth, int32_t bac
 	kClientHeight_ = backBufferHeight;
 
 	// -----------------------------------
+	bufferCount_ = 2;
+
+	// -----------------------------------
 	transform_ = { {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
 	// -----------------------------------
 
@@ -217,7 +220,7 @@ void DirectXCommon::InitializeScreen() {
 	// スワップチェーンの生成
 	SwapChainCreate();
 	// DescriptorHeapの生成
-	CreateDescriptorHeap();
+	CreateRTVHeap();
 	// RTV(RenderTargetView)を作る
 	CreateRTV();
 }
@@ -510,31 +513,25 @@ void DirectXCommon::CreateCommand() {
 void DirectXCommon::SwapChainCreate() {
 	HRESULT hr = S_FALSE;
 	swapChain_ = nullptr;
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
-	swapChainDesc.Width = kClientWidth_;							// 画面の幅。ウィンドウのクライアント領域を同じ物にしておく
-	swapChainDesc.Height = kClientHeight_;							// 画面の高さ。ウィンドウのクライアント領域を同じ物にしておく
-	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;				// 色の形式
-	swapChainDesc.SampleDesc.Count = 1;								// マルチサンプルしない
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;	// 描画のターゲットとして利用する
-	swapChainDesc.BufferCount = 2;									// ダブルバッファ
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;		// モニタに移したら、中身を破棄
+	swapChainDesc_.Width = kClientWidth_;							// 画面の幅。ウィンドウのクライアント領域を同じ物にしておく
+	swapChainDesc_.Height = kClientHeight_;							// 画面の高さ。ウィンドウのクライアント領域を同じ物にしておく
+	swapChainDesc_.Format = DXGI_FORMAT_R8G8B8A8_UNORM;				// 色の形式
+	swapChainDesc_.SampleDesc.Count = 1;								// マルチサンプルしない
+	swapChainDesc_.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;	// 描画のターゲットとして利用する
+	swapChainDesc_.BufferCount = 2;									// ダブルバッファ
+	swapChainDesc_.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;		// モニタに移したら、中身を破棄
 	// コマンドキュー、ウィンドウハンドル、設定を渡して生成する
-	hr = dxgiFactory_->CreateSwapChainForHwnd(commandQueue_, winApp_->GetHwnd(), &swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(&swapChain_));
+	hr = dxgiFactory_->CreateSwapChainForHwnd(commandQueue_, winApp_->GetHwnd(), &swapChainDesc_, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(&swapChain_));
 	assert(SUCCEEDED(hr));
 }
 
 /// <summary>
 /// ディスクリプタヒープの生成
 /// </summary>
-void DirectXCommon::CreateDescriptorHeap() {
+void DirectXCommon::CreateRTVHeap() {
 	HRESULT hr = S_FALSE;
-	
-	D3D12_DESCRIPTOR_HEAP_DESC rtvDescrictorHeapDesc{};
-	rtvDescrictorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; // レンダーターゲットビュー用
-	rtvDescrictorHeapDesc.NumDescriptors = 2; // ダブルバッファ用に2つ。多くてもかまわない
-	hr = device_->CreateDescriptorHeap(&rtvDescrictorHeapDesc, IID_PPV_ARGS(&rtcDescriptorHeap_));
-	// ディスクリプタヒープを作れなかったので起動できない
-	assert(SUCCEEDED(hr));
+
+	rtcDescriptorHeap_ = CreateDescriptorHeap(device_, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
 
 	// swapChainからResorceを引っ張ってくる -----------------------------------
 	hr = swapChain_->GetBuffer(0, IID_PPV_ARGS(&swapChainResources_[0]));

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "Function/Convert.h"
+#include "Function/DirectXUtils.h"
 #include "Window/WinApp.h"
 #include "Vector4.h"
 
@@ -28,6 +29,12 @@ public: // メンバ関数
 	/// </summary>
 	/// <returns></returns>
 	static DirectXCommon* GetInstacne();
+
+	UINT GetBufferCount() const {return bufferCount_;}
+
+	ID3D12Device* GetDevice() const { return device_; }
+
+	ID3D12GraphicsCommandList* GetCommandList() const { return commandList_; }
 
 	/// <summary>
 	/// 初期化
@@ -67,6 +74,7 @@ private: // メンバ変数
 
 	uint64_t fenceValue_ = 0;
 	HANDLE fenceEvent_;
+	DXGI_SWAP_CHAIN_DESC1 swapChainDesc_;
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc_;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles_[2];
 	D3D12_RESOURCE_BARRIER barrier_;
@@ -79,6 +87,7 @@ private: // メンバ変数
 	D3D12_RECT scissorRect_{};
 
 	//
+	UINT bufferCount_;
 
 	//
 	kTransform transform_;
@@ -132,7 +141,7 @@ public: // メンバ関数(関数内の細かい関数)
 	/// <summary>
 	/// ディスクリプタヒープの生成
 	/// </summary>
-	void CreateDescriptorHeap();
+	void CreateRTVHeap();
 
 	/// <summary>
 	/// レンダーターゲットビューの生成

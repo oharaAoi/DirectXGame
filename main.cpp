@@ -4,8 +4,7 @@
 #include "Camera.h"
 #include <memory>
 
-// ログを表示するための関数
-void Log(const std::string& message);
+#include "ImGuiManager.h"
 
 static const int kWindowWidth = 1280;
 static const int kWindowHeight = 720;
@@ -28,6 +27,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	sDirectX = DirectXCommon::GetInstacne();
 	sDirectX->Initialize(sWinApp, kWindowWidth, kWindowHeight);
 
+	// ImGui -----------------------------------------
+	ImGuiManager* imGuiManager = nullptr;
+	imGuiManager = ImGuiManager::GetInstacne();
+	imGuiManager->Init(sWinApp, sDirectX);
+
 	// camera ----------------------------------------
 	std::unique_ptr<Camera> camera = std::make_unique<Camera>();
 	camera->Init();
@@ -37,26 +41,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//==========================================================
 	// ゲームの処理
 	while (sWinApp->ProcessMessage()) {
+		imGuiManager->Begin();
 		sDirectX->BeginFrame();
 
 		sDirectX->CreateWVPResource(camera->GetVpMatrix());
+
+		ImGui::ShowDemoWindow();
 		// 三角形の描画
 		sDirectX->DrawCall();
 
+		imGuiManager->End();
+		imGuiManager->Draw();
+		
 		sDirectX->EndFrame();
 	}
 
+	imGuiManager->Finalize();
 	/*sWinApp->Finalize();*/
 	return 0;
-}
-
-/*=====================================================================================
-	↓関数定義をこれより下で行う
-======================================================================================*/
-
-/*=================================================================================
-	logを表示する関数
-==================================================================================*/
-void Log(const std::string& message) {
-	OutputDebugStringA(message.c_str());
 }

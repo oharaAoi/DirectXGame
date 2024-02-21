@@ -16,20 +16,39 @@
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DirectXCommon\DirectXCommon.cpp" />
+    <ClCompile Include="Externals\ImGui\imgui.cpp" />
+    <ClCompile Include="Externals\ImGui\imgui_demo.cpp" />
+    <ClCompile Include="Externals\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="Externals\ImGui\imgui_impl_dx12.cpp" />
+    <ClCompile Include="Externals\ImGui\imgui_impl_win32.cpp" />
+    <ClCompile Include="Externals\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="Externals\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Function\Convert.cpp" />
+    <ClCompile Include="Function\DirectXUtils.cpp" />
+    <ClCompile Include="Lib\MyMatrix.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MyMatrix.cpp" />
+    <ClCompile Include="Manager\ImGuiManager.cpp" />
     <ClCompile Include="window\WinApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="DirectXCommon\DirectXCommon.h" />
+    <ClInclude Include="Externals\ImGui\imconfig.h" />
+    <ClInclude Include="Externals\ImGui\imgui.h" />
+    <ClInclude Include="Externals\ImGui\imgui_impl_dx12.h" />
+    <ClInclude Include="Externals\ImGui\imgui_impl_win32.h" />
+    <ClInclude Include="Externals\ImGui\imgui_internal.h" />
+    <ClInclude Include="Externals\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="Externals\ImGui\imstb_textedit.h" />
+    <ClInclude Include="Externals\ImGui\imstb_truetype.h" />
     <ClInclude Include="Function\Convert.h" />
+    <ClInclude Include="Function\DirectXUtils.h" />
     <ClInclude Include="Lib\Matrix4x4.h" />
+    <ClInclude Include="Lib\MyMatrix.h" />
     <ClInclude Include="Lib\Transform.h" />
     <ClInclude Include="Lib\Vector3.h" />
     <ClInclude Include="Lib\Vector4.h" />
-    <ClInclude Include="MyMatrix.h" />
+    <ClInclude Include="Manager\ImGuiManager.h" />
     <ClInclude Include="window\WinApp.h" />
   </ItemGroup>
   <ItemGroup>
@@ -87,7 +106,7 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir)\Lib\;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\Manager\;$(ProjectDir)\Lib\;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

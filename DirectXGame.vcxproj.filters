@@ -22,6 +22,15 @@
     <Filter Include="Window">
       <UniqueIdentifier>{56f2caf3-4e47-4d3d-87fa-49006811a81a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ImGui">
+      <UniqueIdentifier>{4374b425-b4d7-46b1-8b33-1222b332f5e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lib">
+      <UniqueIdentifier>{dda79fea-43eb-4528-9d00-a15062fd39b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Manager">
+      <UniqueIdentifier>{4a246ef0-7ad1-4c8d-8fab-1111bdf77784}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -39,11 +48,38 @@
     <ClCompile Include="Function\Convert.cpp">
       <Filter>Function</Filter>
     </ClCompile>
-    <ClCompile Include="MyMatrix.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="Camera.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Function\DirectXUtils.cpp">
+      <Filter>Function</Filter>
+    </ClCompile>
+    <ClCompile Include="Externals\ImGui\imgui.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Externals\ImGui\imgui_demo.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Externals\ImGui\imgui_draw.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Externals\ImGui\imgui_impl_dx12.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Externals\ImGui\imgui_impl_win32.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Externals\ImGui\imgui_tables.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Externals\ImGui\imgui_widgets.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\MyMatrix.cpp">
+      <Filter>Lib</Filter>
+    </ClCompile>
+    <ClCompile Include="Manager\ImGuiManager.cpp">
+      <Filter>Manager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -56,23 +92,53 @@
     <ClInclude Include="Function\Convert.h">
       <Filter>Function</Filter>
     </ClInclude>
-    <ClInclude Include="Lib\Vector3.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="Lib\Vector4.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="MyMatrix.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="Lib\Matrix4x4.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="Camera.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="Function\DirectXUtils.h">
+      <Filter>Function</Filter>
+    </ClInclude>
+    <ClInclude Include="Externals\ImGui\imconfig.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Externals\ImGui\imgui.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Externals\ImGui\imgui_impl_dx12.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Externals\ImGui\imgui_impl_win32.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Externals\ImGui\imgui_internal.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Externals\ImGui\imstb_rectpack.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Externals\ImGui\imstb_textedit.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Externals\ImGui\imstb_truetype.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\MyMatrix.h">
+      <Filter>Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="Manager\ImGuiManager.h">
+      <Filter>Manager</Filter>
+    </ClInclude>
     <ClInclude Include="Lib\Transform.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Vector3.h">
+      <Filter>Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Vector4.h">
+      <Filter>Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Matrix4x4.h">
+      <Filter>Lib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
