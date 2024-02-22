@@ -12,9 +12,9 @@
 #include "Function/Convert.h"
 #include "Function/DirectXUtils.h"
 #include "Window/WinApp.h"
-#include "Vector4.h"
 
 // lib
+#include "VertexData.h"
 #include "MyMatrix.h"
 #include "Transform.h"
 
@@ -36,10 +36,16 @@ public: // メンバ関数
 
 	ID3D12GraphicsCommandList* GetCommandList() const { return commandList_; }
 
+	ID3D12DescriptorHeap* GetSRVHeap() const { return srvHeap_; }
+
+	D3D12_CPU_DESCRIPTOR_HANDLE GetSrvHandleCPU() const { return srvHandleCPU_; }
+ 
 	/// <summary>
 	/// 初期化
 	/// </summary>
 	void Initialize(WinApp* win, int32_t backBufferWidth, int32_t backBufferHeight);
+
+	void Finalize();
 
 
 private: // メンバ変数
@@ -57,7 +63,7 @@ private: // メンバ変数
 	ID3D12CommandAllocator* commandAllocator_ = nullptr;
 	ID3D12GraphicsCommandList* commandList_ = nullptr;
 	IDXGISwapChain4* swapChain_ = nullptr;
-	ID3D12DescriptorHeap* rtcDescriptorHeap_ = nullptr;
+	ID3D12DescriptorHeap* rtvDescriptorHeap_ = nullptr;
 	ID3D12Resource* swapChainResources_[2] = { nullptr };
 	ID3D12Fence* fence_ = nullptr;
 	IDxcUtils* dxcUtils_ = nullptr;
@@ -71,6 +77,8 @@ private: // メンバ変数
 	ID3D12Resource* vertexResource_ = nullptr;
 	ID3D12Resource* materialResource_ = nullptr;
 	ID3D12Resource* wvpResource_;
+
+	ID3D12DescriptorHeap* srvHeap_ = nullptr;
 
 	uint64_t fenceValue_ = 0;
 	HANDLE fenceEvent_;
@@ -91,10 +99,14 @@ private: // メンバ変数
 
 	//
 	kTransform transform_;
+
+	// 
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU_;
+	D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU_;
 	
 public: // メンバ関数
 	DirectXCommon() = default;
-	~DirectXCommon();
+	~DirectXCommon() = default;
 	DirectXCommon(const DirectXCommon&) = delete;
 	const DirectXCommon& operator=(const DirectXCommon&) = delete;
 
@@ -182,6 +194,8 @@ public: // メンバ関数(関数内の細かい関数)
 	/// RasterizerStateの設定
 	/// </summary>
 	D3D12_RASTERIZER_DESC SetRasterizerState();
+
+	void SetDescTable();
 
 	/// <summary>
 	/// CompileShader

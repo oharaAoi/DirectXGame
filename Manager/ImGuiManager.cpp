@@ -23,7 +23,7 @@ void ImGuiManager::Init(WinApp* winApp, DirectXCommon* dxCommon){
 	winApp_ = winApp;
 	dxCommon_ = dxCommon;
 
-	srvHeap_ = CreateDescriptorHeap(dxCommon->GetDevice(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
+	srvHeap_ = dxCommon_->GetSRVHeap();
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -37,6 +37,7 @@ void ImGuiManager::Init(WinApp* winApp, DirectXCommon* dxCommon){
 		srvHeap_->GetCPUDescriptorHandleForHeapStart(),
 		srvHeap_->GetGPUDescriptorHandleForHeapStart()
 	);
+
 }
 
 void ImGuiManager::Finalize(){
@@ -58,10 +59,5 @@ void ImGuiManager::End(){
 }
 
 void ImGuiManager::Draw(){
-	ID3D12DescriptorHeap* heaps[] = { srvHeap_ };
-
-	ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
-	commandList->SetDescriptorHeaps(1, heaps);
-
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon_->GetCommandList());
 }

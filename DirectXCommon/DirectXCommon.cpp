@@ -10,52 +10,6 @@ DirectXCommon* DirectXCommon::GetInstacne(){
 	return &instance;
 }
 
-DirectXCommon::~DirectXCommon() {
-
-	wvpResource_->Release();
-	materialResource_->Release();
-	vertexResource_->Release();
-	graphicsPipelineState_->Release();
-	rootSigneture_->Release();
-	if (errorBlob_) {
-		errorBlob_->Release();
-	}
-	pixelShaderBlob_->Release();
-	vertexShaderBlob_->Release();
-	includeHandler_->Release();
-	dxcCompiler_->Release();
-	dxcUtils_->Release();
-
-	//
-	CloseHandle(fenceEvent_);
-	fence_->Release();
-	swapChainResources_[0]->Release();
-	swapChainResources_[1]->Release();
-	rtcDescriptorHeap_->Release();
-	swapChain_->Release();
-	commandList_->Release();
-	commandAllocator_->Release();
-	commandQueue_->Release();
-	device_->Release();
-	useAdapter_->Release();
-	dxgiFactory_->Release();
-
-#ifdef _DEBUG
-	debugController_->Release();
-#endif
-
-	winApp_->Finalize();
-
-	// 
-	IDXGIDebug1* debug;
-	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
-		debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-		debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
-		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
-		debug->Release();
-	}
-}
-
 /*=============================================================================================================================
 	初期化
 =============================================================================================================================*/
@@ -84,6 +38,52 @@ void DirectXCommon::Initialize(WinApp* win, int32_t backBufferWidth, int32_t bac
 	CreatePSO();
 	// 頂点データの生成
 	CreateVertexResource();
+}
+
+void DirectXCommon::Finalize(){
+	srvHeap_->Release();
+	wvpResource_->Release();
+	materialResource_->Release();
+	vertexResource_->Release();
+	graphicsPipelineState_->Release();
+	rootSigneture_->Release();
+	if (errorBlob_) {
+		errorBlob_->Release();
+	}
+	pixelShaderBlob_->Release();
+	vertexShaderBlob_->Release();
+	includeHandler_->Release();
+	dxcCompiler_->Release();
+	dxcUtils_->Release();
+
+	//
+	CloseHandle(fenceEvent_);
+	fence_->Release();
+	swapChainResources_[0]->Release();
+	swapChainResources_[1]->Release();
+	rtvDescriptorHeap_->Release();
+	swapChain_->Release();
+	commandList_->Release();
+	commandAllocator_->Release();
+	commandQueue_->Release();
+	device_->Release();
+	useAdapter_->Release();
+	dxgiFactory_->Release();
+
+#ifdef _DEBUG
+	debugController_->Release();
+#endif
+
+	winApp_->Finalize();
+
+	// 
+	IDXGIDebug1* debug;
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
+		debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+		debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
+		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
+		debug->Release();
+	}
 }
 
 /*=============================================================================================================================
@@ -221,8 +221,13 @@ void DirectXCommon::InitializeScreen() {
 	SwapChainCreate();
 	// DescriptorHeapの生成
 	CreateRTVHeap();
+	// ---------------------
+
 	// RTV(RenderTargetView)を作る
 	CreateRTV();
+
+	srvHeap_ = CreateDescriptorHeap(device_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
+
 }
 
 /*=============================================================================================================================
@@ -255,6 +260,9 @@ void DirectXCommon::BeginFrame(){
 	// 指定した色で画面全体をクリアする
 	float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
 	commandList_->ClearRenderTargetView(rtvHandles_[backBufferIndex], clearColor, 0, nullptr);
+
+	ID3D12DescriptorHeap* heaps[] = { srvHeap_ };
+	commandList_->SetDescriptorHeaps(1, heaps);
 }
 
 /*=============================================================================================================================
@@ -336,6 +344,8 @@ void DirectXCommon::DrawCall() {
 	// 02_02 -------------------------
 	commandList_->SetGraphicsRootConstantBufferView(1, wvpResource_->GetGPUVirtualAddress());
 	// -------------------------------
+	commandList_->SetGraphicsRootDescriptorTable(2, srvHandleGPU_);
+	// 
 	// 描画
 	commandList_->DrawInstanced(3, 1, 0, 0);
 }
@@ -347,11 +357,17 @@ void DirectXCommon::CreatePSO() {
 	HRESULT hr = S_FALSE;
 
 	// ---------------------------------------------------------------------------------
-	D3D12_INPUT_ELEMENT_DESC inputElementDescs[1] = {};
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[2] = {};
 	inputElementDescs[0].SemanticName = "POSITION";
 	inputElementDescs[0].SemanticIndex = 0;
 	inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	inputElementDescs[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	//
+	inputElementDescs[1].SemanticName = "TEXCORD";
+	inputElementDescs[1].SemanticIndex = 0;
+	inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+	inputElementDescs[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
 	inputLayoutDesc.pInputElementDescs = inputElementDescs;
 	inputLayoutDesc.NumElements = _countof(inputElementDescs);
@@ -391,7 +407,7 @@ void DirectXCommon::CreateVertexResource(){
 	D3D12_RESOURCE_DESC vertexResourceDesc{};
 	// バッファリソース。テクスチャの場合はまた別の設定をする
 	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	vertexResourceDesc.Width = sizeof(Vector4) * 3;
+	vertexResourceDesc.Width = sizeof(VertexData) * 3;
 	// バッファの場合がこれらは1にする決まり
 	vertexResourceDesc.Height = 1;
 	vertexResourceDesc.DepthOrArraySize = 1;
@@ -408,20 +424,23 @@ void DirectXCommon::CreateVertexResource(){
 	// リソースの先頭のアドレスから使う
 	vertexBufferView_.BufferLocation = vertexResource_->GetGPUVirtualAddress();
 	// 使用するリソースのサイズは頂点3つ分のサイズ
-	vertexBufferView_.SizeInBytes = sizeof(Vector4) * 3;
+	vertexBufferView_.SizeInBytes = sizeof(VertexData) * 3;
 	// 1頂点当たりのサイズ
-	vertexBufferView_.StrideInBytes = sizeof(Vector4);
+	vertexBufferView_.StrideInBytes = sizeof(VertexData);
 
 	// Resourceにデータを書き込む -------------------------------------------------------------------------
-	Vector4* vertexData = nullptr;
+	VertexData* vertexData = nullptr;
 	// 書き込む溜めのアドレスを取得
 	vertexResource_->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	// 左下
-	vertexData[0] = { -0.5f, -0.5f, 0.0f, 1.0f };
+	vertexData[0].pos = { -0.5f, -0.5f, 0.0f, 1.0f };
+	vertexData[0].texcord = { 0.0f, 1.0f };
 	// 上
-	vertexData[1] = { 0.0f, 0.5f, 0.0f, 1.0f };
+	vertexData[1].pos = { 0.0f, 0.5f, 0.0f, 1.0f };
+	vertexData[1].texcord = { 0.5f, 0.0f };
 	// 右下
-	vertexData[2] = { 0.5f, -0.5f, 0.0f, 1.0f };
+	vertexData[2].pos = { 0.5f, -0.5f, 0.0f, 1.0f };
+	vertexData[2].texcord = { 1.0f, 1.0f };
 
 	// 02_01 -----------------------------------------------------------------------------------------
 	materialResource_ = CreateBufferResource(device_, sizeof(Vector4));
@@ -430,7 +449,7 @@ void DirectXCommon::CreateVertexResource(){
 	// 書き込むためのアドレスを取得
 	materialResource_->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
 	// 赤
-	*materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+	*materialData = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// 02_02 -----------------------------------------------------------------------------------------
 	wvpResource_ = CreateBufferResource(device_, sizeof(Matrix4x4));
@@ -460,7 +479,6 @@ void DirectXCommon::CreateVertexResource(){
 }
 
 // ↓初期化に関するメンバ関数 ---------------------------------------------------------------------------------------------------------------------------
-
 ID3D12Resource* DirectXCommon::CreateBufferResource(ID3D12Device* device, size_t sizeInBytes) {
 	HRESULT hr = S_FALSE;
 	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
@@ -531,7 +549,7 @@ void DirectXCommon::SwapChainCreate() {
 void DirectXCommon::CreateRTVHeap() {
 	HRESULT hr = S_FALSE;
 
-	rtcDescriptorHeap_ = CreateDescriptorHeap(device_, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
+	rtvDescriptorHeap_ = CreateDescriptorHeap(device_, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
 
 	// swapChainからResorceを引っ張ってくる -----------------------------------
 	hr = swapChain_->GetBuffer(0, IID_PPV_ARGS(&swapChainResources_[0]));
@@ -550,7 +568,7 @@ void DirectXCommon::CreateRTV(){
 	rtvDesc_.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
 	// ディスクリプタの先頭を取得する
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtcDescriptorHeap_->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap_->GetCPUDescriptorHandleForHeapStart();
 	// まず1つめを作る。最初のところに作る。作る場所を指定して上げる必要がある
 	rtvHandles_[0] = rtvStartHandle;
 	device_->CreateRenderTargetView(swapChainResources_[0], &rtvDesc_, rtvHandles_[0]);
@@ -569,9 +587,16 @@ ID3D12RootSignature* DirectXCommon::CreateRootSignature(){
 	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
+	// textureを読むための
+	D3D12_DESCRIPTOR_RANGE descriptorRange[1]{};
+	descriptorRange[0].BaseShaderRegister = 0;
+	descriptorRange[0].NumDescriptors = 1;
+	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
 	// 02_01 -------------------------------------
 	// RootParameter作成。複数設定できるので配列。
-	D3D12_ROOT_PARAMETER rootParameters[2] = {};
+	D3D12_ROOT_PARAMETER rootParameters[3] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;	// CBVを使う
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;	// PixelShaderで使う
 	rootParameters[0].Descriptor.ShaderRegister = 0;					// レジスタ番号0とバインド
@@ -581,10 +606,28 @@ ID3D12RootSignature* DirectXCommon::CreateRootSignature(){
 	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 	rootParameters[1].Descriptor.ShaderRegister = 0;
 
+	// 02_04 -------------------------------------
+	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
+	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+
 	descriptionRootSignature.pParameters = rootParameters;				// ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);	// 配列の長さ
 
-	// -------------------------------------------
+	// Samplerの設定 -------------------------------------------
+	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+	staticSamplers[0].ShaderRegister = 0;
+	staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	
+	descriptionRootSignature.pStaticSamplers = staticSamplers;
+	descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
 
 	// シリアライズしてバイナリにする
 	ID3DBlob* signatureBlob = nullptr;
@@ -644,6 +687,18 @@ D3D12_RASTERIZER_DESC DirectXCommon::SetRasterizerState() {
 	rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
 	return rasterizerDesc;
+}
+
+/// <summary>
+/// 
+/// </summary>
+void DirectXCommon::SetDescTable() {
+	// SRVを作成するDescriptorHeapの場所を求める
+	srvHandleCPU_ = srvHeap_->GetCPUDescriptorHandleForHeapStart();
+	srvHandleGPU_ = srvHeap_->GetGPUDescriptorHandleForHeapStart();
+	// 先頭はImGuiが使っている溜めその次を使う
+	srvHandleCPU_.ptr += device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	srvHandleGPU_.ptr += device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 /// <summary>

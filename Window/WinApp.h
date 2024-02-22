@@ -35,7 +35,7 @@ public: // 静的メンバ関数
 
 public: // メンバ関数
 	WinApp() = default;
-	~WinApp();
+	~WinApp() = default;
 	WinApp(const WinApp& obj) = delete;
 	const WinApp& operator=(const WinApp&) = delete;
 
