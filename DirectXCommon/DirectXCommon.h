@@ -4,6 +4,8 @@
 #include <dxgi1_6.h>
 #include <cassert>
 #include <dxgidebug.h>
+#include <DirectXTex.h>
+#include <d3dx12.h>
 
 // dxc
 #include <dxcapi.h>
@@ -103,6 +105,10 @@ private: // メンバ変数
 	// 
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU_;
 	D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU_;
+
+	DirectX::ScratchImage mipImage_;
+	ID3D12Resource* textureResource_ = nullptr;
+	ID3D12Resource* intermediateResource_ = nullptr;
 	
 public: // メンバ関数
 	DirectXCommon() = default;
@@ -171,11 +177,6 @@ public: // メンバ関数(関数内の細かい関数)
 	void CreateVertexResource();
 
 	/// <summary>
-	/// BufferResourceを作る関数
-	/// </summary>
-	ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes);
-
-	/// <summary>
 	/// RootSignatureの生成
 	/// </summary>
 	ID3D12RootSignature* CreateRootSignature();
@@ -218,6 +219,33 @@ public: // メンバ関数(関数内の細かい関数)
 	/// 
 	/// </summary>
 	void CreateWVPResource(const Matrix4x4& vpMatrix);
+
+	void CreateTexture();
+
+public: // textureにかかわるもの
+
+	/// <summary>
+	/// Textrueデータを読む
+	/// </summary>
+	/// <returns></returns>
+	DirectX::ScratchImage LoadTextrue(const std::string& filePath);
+
+	/// <summary>
+	/// Textureを読んで使えるようにする流れ
+	/// </summary>
+	/// <param name="device"></param>
+	/// <param name="metaData"></param>
+	/// <returns></returns>
+	ID3D12Resource* CreateTextureResource(ID3D12Device* device, const DirectX::TexMetadata& metaData);
+
+	/// <summary>
+	/// TextureResourceにデータを転送する
+	/// </summary>
+	/// <param name="texture"></param>
+	/// <param name="mipImages"></param>
+	[[nodiscard]]
+	ID3D12Resource* UploadTextureData(ID3D12Resource* texture, const DirectX::ScratchImage& mipImages, ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
+
 
 	void Log(const std::string& message);
 };

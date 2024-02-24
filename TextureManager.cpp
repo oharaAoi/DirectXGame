@@ -10,7 +10,6 @@ TextureManager* TextureManager::GetInstacne(){
 //=============================================================================================================================
 void TextureManager::Initialize(DirectXCommon* dxCommon){
 	assert(dxCommon);
-	dxCommon_ = dxCommon; 
 
 	mipImage_ = LoadTextrue("Resource/uvChecker.png");
 	const DirectX::TexMetadata& metadata = mipImage_.GetMetadata();

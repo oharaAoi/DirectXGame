@@ -34,6 +34,14 @@ IDxcBlob* CompilerShader(
 ID3D12DescriptorHeap* CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptor, bool shaderVisible);
 
 /// <summary>
+/// 
+/// </summary>
+/// <param name="device"></param>
+/// <param name="sizeInBytes"></param>
+/// <returns></returns>
+ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes);
+
+/// <summary>
 /// ログを出す
 /// </summary>
 /// <param name="message"></param>

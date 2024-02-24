@@ -10,6 +10,54 @@ DirectXCommon* DirectXCommon::GetInstacne(){
 	return &instance;
 }
 
+void DirectXCommon::Finalize() {
+	textureResource_->Release();
+	srvHeap_->Release();
+	wvpResource_->Release();
+	materialResource_->Release();
+	vertexResource_->Release();
+	graphicsPipelineState_->Release();
+	rootSigneture_->Release();
+	if (errorBlob_) {
+		errorBlob_->Release();
+	}
+	pixelShaderBlob_->Release();
+	vertexShaderBlob_->Release();
+	includeHandler_->Release();
+	dxcCompiler_->Release();
+	dxcUtils_->Release();
+
+	//
+	CloseHandle(fenceEvent_);
+	fence_->Release();
+	swapChainResources_[0]->Release();
+	swapChainResources_[1]->Release();
+	rtvDescriptorHeap_->Release();
+	intermediateResource_->Release();
+	swapChain_->Release();
+	commandList_->Release();
+	commandAllocator_->Release();
+	commandQueue_->Release();
+	device_->Release();
+	useAdapter_->Release();
+	dxgiFactory_->Release();
+
+#ifdef _DEBUG
+	debugController_->Release();
+#endif
+
+	winApp_->Finalize();
+
+	// 
+	IDXGIDebug1* debug;
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
+		debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+		debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
+		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
+		debug->Release();
+	}
+}
+
 /*=============================================================================================================================
 	初期化
 =============================================================================================================================*/
@@ -38,52 +86,11 @@ void DirectXCommon::Initialize(WinApp* win, int32_t backBufferWidth, int32_t bac
 	CreatePSO();
 	// 頂点データの生成
 	CreateVertexResource();
-}
+	// texture
+	CreateTexture();
 
-void DirectXCommon::Finalize(){
-	srvHeap_->Release();
-	wvpResource_->Release();
-	materialResource_->Release();
-	vertexResource_->Release();
-	graphicsPipelineState_->Release();
-	rootSigneture_->Release();
-	if (errorBlob_) {
-		errorBlob_->Release();
-	}
-	pixelShaderBlob_->Release();
-	vertexShaderBlob_->Release();
-	includeHandler_->Release();
-	dxcCompiler_->Release();
-	dxcUtils_->Release();
-
-	//
-	CloseHandle(fenceEvent_);
-	fence_->Release();
-	swapChainResources_[0]->Release();
-	swapChainResources_[1]->Release();
-	rtvDescriptorHeap_->Release();
-	swapChain_->Release();
-	commandList_->Release();
-	commandAllocator_->Release();
-	commandQueue_->Release();
-	device_->Release();
-	useAdapter_->Release();
-	dxgiFactory_->Release();
-
-#ifdef _DEBUG
-	debugController_->Release();
-#endif
-
-	winApp_->Finalize();
-
-	// 
-	IDXGIDebug1* debug;
-	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
-		debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-		debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
-		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
-		debug->Release();
-	}
+	// texture
+	intermediateResource_ = UploadTextureData(textureResource_, mipImage_, device_, commandList_);
 }
 
 /*=============================================================================================================================
@@ -263,6 +270,8 @@ void DirectXCommon::BeginFrame(){
 
 	ID3D12DescriptorHeap* heaps[] = { srvHeap_ };
 	commandList_->SetDescriptorHeaps(1, heaps);
+
+	// -----------------------------------------------------------------
 }
 
 /*=============================================================================================================================
@@ -479,30 +488,30 @@ void DirectXCommon::CreateVertexResource(){
 }
 
 // ↓初期化に関するメンバ関数 ---------------------------------------------------------------------------------------------------------------------------
-ID3D12Resource* DirectXCommon::CreateBufferResource(ID3D12Device* device, size_t sizeInBytes) {
-	HRESULT hr = S_FALSE;
-	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
-	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	// 頂点リソースの設定
-	D3D12_RESOURCE_DESC vertexResourceDesc = {};
-	// バッファリソース。テクスチャの場合はまた別の設定をする
-	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	vertexResourceDesc.Width = sizeInBytes * 3;
-	// バッファの場合がこれらは1にする決まり
-	vertexResourceDesc.Height = 1;
-	vertexResourceDesc.DepthOrArraySize = 1;
-	vertexResourceDesc.MipLevels = 1;
-	vertexResourceDesc.SampleDesc.Count = 1;
-	// バッファの場合はこれにする決まり
-	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	// 実際に頂点リソースを作る
-	ID3D12Resource* vertexResource = nullptr;
-	hr = device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE,
-		&vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
-	assert(SUCCEEDED(hr));
-
-	return vertexResource;
-}
+//ID3D12Resource* DirectXCommon::CreateBufferResource(ID3D12Device* device, size_t sizeInBytes) {
+//	HRESULT hr = S_FALSE;
+//	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
+//	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+//	// 頂点リソースの設定
+//	D3D12_RESOURCE_DESC vertexResourceDesc = {};
+//	// バッファリソース。テクスチャの場合はまた別の設定をする
+//	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+//	vertexResourceDesc.Width = sizeInBytes * 3;
+//	// バッファの場合がこれらは1にする決まり
+//	vertexResourceDesc.Height = 1;
+//	vertexResourceDesc.DepthOrArraySize = 1;
+//	vertexResourceDesc.MipLevels = 1;
+//	vertexResourceDesc.SampleDesc.Count = 1;
+//	// バッファの場合はこれにする決まり
+//	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+//	// 実際に頂点リソースを作る
+//	ID3D12Resource* vertexResource = nullptr;
+//	hr = device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE,
+//		&vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
+//	assert(SUCCEEDED(hr));
+//
+//	return vertexResource;
+//}
 
 /// <summary>
 /// コマンドを生成
@@ -791,11 +800,104 @@ IDxcBlob* DirectXCommon::CompilerShader(
 void DirectXCommon::CreateWVPResource(const Matrix4x4& vpMatrix){
 	Matrix4x4* wvpData = nullptr;
 	wvpResource_->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
-	transform_.rotate.y += 0.03f;
+	/*transform_.rotate.y += 0.03f;*/
 	Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scalel, transform_.rotate, transform_.translate);
 	Matrix4x4 wvpMatrix = Multiply(worldMatrix, vpMatrix);
 	*wvpData = wvpMatrix;
 }
+
+void DirectXCommon::CreateTexture() {
+	mipImage_ = LoadTextrue("Resource/uvChecker.png");
+	const DirectX::TexMetadata& metadata = mipImage_.GetMetadata();
+	textureResource_ = CreateTextureResource(device_, metadata);
+	/*UploadTextureData(textureResource_, mipImage_);*/
+
+	// ------------------------------------------------------------
+	// metadataを元にSRVの設定
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	srvDesc.Format = metadata.format;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
+
+	// ------------------------------------------------------------
+	// SRVを作成するDescriptorHeapの場所を求める
+	srvHandleCPU_ = srvHeap_->GetCPUDescriptorHandleForHeapStart();
+	srvHandleGPU_ = srvHeap_->GetGPUDescriptorHandleForHeapStart();
+	// 先頭はImGuiが使っている溜めその次を使う
+	srvHandleCPU_.ptr += device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	srvHandleGPU_.ptr += device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// 生成
+	device_->CreateShaderResourceView(textureResource_, &srvDesc, srvHandleCPU_);
+}
+
+// ============================================================================================
+DirectX::ScratchImage DirectXCommon::LoadTextrue(const std::string& filePath){
+	DirectX::ScratchImage image{};
+	std::wstring filePathW = ConvertWString(filePath);
+	HRESULT hr = DirectX::LoadFromWICFile(filePathW.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+	assert(SUCCEEDED(hr));
+
+	// ミニマップの作成
+	DirectX::ScratchImage mipImages{};
+	hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(), image.GetMetadata(), DirectX::TEX_FILTER_SRGB, 0, mipImages);
+	assert(SUCCEEDED(hr));
+
+	return mipImages;
+}
+
+ID3D12Resource* DirectXCommon::CreateTextureResource(ID3D12Device* device, const DirectX::TexMetadata& metadata){
+	// metadataを元にResourceの設定
+	D3D12_RESOURCE_DESC desc{};
+	desc.Width = UINT(metadata.width);								// Textureの幅
+	desc.Height = UINT(metadata.height);							// Textureの高さ
+	desc.MipLevels = UINT16(metadata.mipLevels);					// mipmapの数
+	desc.DepthOrArraySize = UINT16(metadata.arraySize);				// 奥行き　or 配列Textureの配数
+	desc.Format = metadata.format;									// TextureのFormat
+	desc.SampleDesc.Count = 1;										// サンプリングカウント
+	desc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension);	// Textureの次元数
+
+	// 利用するheapの設定。非常に特殊な運用。exで一般的
+	D3D12_HEAP_PROPERTIES heapProperties{};
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+	// resourceを生成する
+	ID3D12Resource* resource = nullptr;
+	HRESULT hr = device->CreateCommittedResource(
+		&heapProperties,					// Heapの設定
+		D3D12_HEAP_FLAG_NONE,				// Heapの特殊の設定
+		&desc,								// Resourceの設定
+		D3D12_RESOURCE_STATE_COPY_DEST,	// 初回のResourceState Textureは木基本読むだけ
+		nullptr,							// clear最適地。使わない
+		IID_PPV_ARGS(&resource)				// 作成するResourceポインタへのポインタ
+	);
+	assert(SUCCEEDED(hr));
+
+	return resource;
+}
+
+[[nodiscard]]
+ID3D12Resource* DirectXCommon::UploadTextureData(ID3D12Resource* texture, const DirectX::ScratchImage& mipImages, ID3D12Device* device, ID3D12GraphicsCommandList* commandList){
+	
+	std::vector<D3D12_SUBRESOURCE_DATA> subresource;
+	DirectX::PrepareUpload(device, mipImages.GetImages(), mipImages.GetImageCount(), mipImages.GetMetadata(), subresource);
+	uint64_t intermediateSize = GetRequiredIntermediateSize(texture, 0, UINT(subresource.size()));
+	ID3D12Resource* intermediateResource = CreateBufferResource(device, intermediateSize);
+	UpdateSubresources(commandList, texture, intermediateResource, 0, 0, UINT(subresource.size()), subresource.data());
+
+	D3D12_RESOURCE_BARRIER barrier{};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	barrier.Transition.pResource = texture;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+	commandList->ResourceBarrier(1, &barrier);
+
+	return intermediateResource;
+}
+// ============================================================================================
 
 void DirectXCommon::Log(const std::string& message) {
 	OutputDebugStringA(message.c_str());

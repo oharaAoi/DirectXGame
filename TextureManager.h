@@ -56,10 +56,7 @@ public:
 
 private:
 	DirectX::ScratchImage mipImage_;
-
 	ID3D12Resource* textureResource_;
-
-	DirectXCommon* dxCommon_;
 	
 	//D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU_;
 	//D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU_;

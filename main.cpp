@@ -38,9 +38,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// Texture ------------------------------------------------------
-	TextureManager* textureManager = nullptr;
+	/*TextureManager* textureManager = nullptr;
 	textureManager = TextureManager::GetInstacne();
-	textureManager->Initialize(sDirectX);
+	textureManager->Initialize(sDirectX);*/
 
 	// camera -------------------------------------------------------
 	std::unique_ptr<Camera> camera = std::make_unique<Camera>();
@@ -70,11 +70,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//	終了処理
 	//===============================================================
 	imGuiManager->Finalize();
-	textureManager->Finalize();
+	/*textureManager->Finalize();*/
 	sDirectX->Finalize();
 
 	imGuiManager = nullptr;
-	textureManager = nullptr;
+	/*textureManager = nullptr;*/
 	sWinApp = nullptr;
 	sDirectX = nullptr;
 
