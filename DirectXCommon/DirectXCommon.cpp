@@ -11,8 +11,12 @@ DirectXCommon* DirectXCommon::GetInstacne(){
 }
 
 void DirectXCommon::Finalize() {
+	dsvDescriptorHeap_->Release();
+	depthStencilResource_->Release();
+
 	textureResource_->Release();
 	srvHeap_->Release();
+
 	wvpResource_->Release();
 	materialResource_->Release();
 	vertexResource_->Release();
@@ -232,8 +236,20 @@ void DirectXCommon::InitializeScreen() {
 
 	// RTV(RenderTargetView)を作る
 	CreateRTV();
-
 	srvHeap_ = CreateDescriptorHeap(device_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
+
+	// ---------------------
+	// 深度
+	depthStencilResource_ = CreateDepthStencilTextureResource(device_, kClientWidth_, kClientHeight_);
+
+	// DSV用のヒープでディスクリプタの数は1。Shaderには振れないのでfalse
+	dsvDescriptorHeap_ = CreateDescriptorHeap(device_, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	// 先頭にDsvを作る
+	device_->CreateDepthStencilView(depthStencilResource_, &dsvDesc, dsvDescriptorHeap_->GetCPUDescriptorHandleForHeapStart());
 
 }
 
@@ -263,15 +279,23 @@ void DirectXCommon::BeginFrame(){
 	// -------------------------------------------
 
 	// 描画先のRTVを設定する
-	commandList_->OMSetRenderTargets(1, &rtvHandles_[backBufferIndex], false, nullptr);
+	//commandList_->OMSetRenderTargets(1, &rtvHandles_[backBufferIndex], false, nullptr);
+
+	// DSVの設定
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap_->GetCPUDescriptorHandleForHeapStart();
+	commandList_->OMSetRenderTargets(1, &rtvHandles_[backBufferIndex], false, &dsvHandle);
+
 	// 指定した色で画面全体をクリアする
 	float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
 	commandList_->ClearRenderTargetView(rtvHandles_[backBufferIndex], clearColor, 0, nullptr);
+
+	commandList_->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	ID3D12DescriptorHeap* heaps[] = { srvHeap_ };
 	commandList_->SetDescriptorHeaps(1, heaps);
 
 	// -----------------------------------------------------------------
+
 }
 
 /*=============================================================================================================================
@@ -356,7 +380,7 @@ void DirectXCommon::DrawCall() {
 	commandList_->SetGraphicsRootDescriptorTable(2, srvHandleGPU_);
 	// 
 	// 描画
-	commandList_->DrawInstanced(3, 1, 0, 0);
+	commandList_->DrawInstanced(6, 1, 0, 0);
 }
 
 //=============================================================================================================================
@@ -382,6 +406,13 @@ void DirectXCommon::CreatePSO() {
 	inputLayoutDesc.NumElements = _countof(inputElementDescs);
 	// ----------------------------------------------------------------------------------
 
+	D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+	// ----------------------------------------------------------------------------------
+
 	ShaderCompile();
 	rootSigneture_ = CreateRootSignature();
 	graphicsPipelineStateDesc_.pRootSignature = rootSigneture_;
@@ -390,6 +421,9 @@ void DirectXCommon::CreatePSO() {
 	graphicsPipelineStateDesc_.PS = { pixelShaderBlob_->GetBufferPointer(), pixelShaderBlob_->GetBufferSize() };
 	graphicsPipelineStateDesc_.BlendState = SetBlendState();
 	graphicsPipelineStateDesc_.RasterizerState = SetRasterizerState();
+
+	graphicsPipelineStateDesc_.DepthStencilState = depthStencilDesc;
+	graphicsPipelineStateDesc_.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	// 書き込むRTVの情報
 	graphicsPipelineStateDesc_.NumRenderTargets = 1;
@@ -409,31 +443,13 @@ void DirectXCommon::CreatePSO() {
 //	VertexResourceの生成
 //=============================================================================================================================
 void DirectXCommon::CreateVertexResource(){
-	HRESULT hr = S_FALSE;
-	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
-	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	// 頂点リソースの設定
-	D3D12_RESOURCE_DESC vertexResourceDesc{};
-	// バッファリソース。テクスチャの場合はまた別の設定をする
-	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	vertexResourceDesc.Width = sizeof(VertexData) * 3;
-	// バッファの場合がこれらは1にする決まり
-	vertexResourceDesc.Height = 1;
-	vertexResourceDesc.DepthOrArraySize = 1;
-	vertexResourceDesc.MipLevels = 1;
-	vertexResourceDesc.SampleDesc.Count = 1;
-	// バッファの場合はこれにする決まり
-	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	// 実際に頂点リソースを作る
-	hr = device_->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE,
-		&vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource_));
-	assert(SUCCEEDED(hr));
+	vertexResource_ = CreateBufferResource(device_, sizeof(VertexData) * 6);
 
 	// VertexBufferViewを作成する ------------------------------------------------------------------------
 	// リソースの先頭のアドレスから使う
 	vertexBufferView_.BufferLocation = vertexResource_->GetGPUVirtualAddress();
 	// 使用するリソースのサイズは頂点3つ分のサイズ
-	vertexBufferView_.SizeInBytes = sizeof(VertexData) * 3;
+	vertexBufferView_.SizeInBytes = sizeof(VertexData) * 6;
 	// 1頂点当たりのサイズ
 	vertexBufferView_.StrideInBytes = sizeof(VertexData);
 
@@ -441,6 +457,7 @@ void DirectXCommon::CreateVertexResource(){
 	VertexData* vertexData = nullptr;
 	// 書き込む溜めのアドレスを取得
 	vertexResource_->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	// 1枚目 ------------------------------------------
 	// 左下
 	vertexData[0].pos = { -0.5f, -0.5f, 0.0f, 1.0f };
 	vertexData[0].texcord = { 0.0f, 1.0f };
@@ -450,6 +467,16 @@ void DirectXCommon::CreateVertexResource(){
 	// 右下
 	vertexData[2].pos = { 0.5f, -0.5f, 0.0f, 1.0f };
 	vertexData[2].texcord = { 1.0f, 1.0f };
+	// 2枚目 ------------------------------------------
+	// 左下
+	vertexData[3].pos = { -0.5f, -0.5f, 0.5f, 1.0f };
+	vertexData[3].texcord = { 0.0f, 1.0f };
+	// 上
+	vertexData[4].pos = { 0.0f, 0.0f, 0.0f, 1.0f };
+	vertexData[4].texcord = { 0.5f, 0.0f };
+	// 右下
+	vertexData[5].pos = { 0.5f, -0.5f, -0.5f, 1.0f };
+	vertexData[5].texcord = { 1.0f, 1.0f };
 
 	// 02_01 -----------------------------------------------------------------------------------------
 	materialResource_ = CreateBufferResource(device_, sizeof(Vector4));
@@ -800,12 +827,13 @@ IDxcBlob* DirectXCommon::CompilerShader(
 void DirectXCommon::CreateWVPResource(const Matrix4x4& vpMatrix){
 	Matrix4x4* wvpData = nullptr;
 	wvpResource_->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
-	/*transform_.rotate.y += 0.03f;*/
+	transform_.rotate.y += 0.01f;
 	Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scalel, transform_.rotate, transform_.translate);
 	Matrix4x4 wvpMatrix = Multiply(worldMatrix, vpMatrix);
 	*wvpData = wvpMatrix;
 }
 
+// ======================================================================================================================================================
 void DirectXCommon::CreateTexture() {
 	mipImage_ = LoadTextrue("Resource/uvChecker.png");
 	const DirectX::TexMetadata& metadata = mipImage_.GetMetadata();
@@ -832,7 +860,6 @@ void DirectXCommon::CreateTexture() {
 	device_->CreateShaderResourceView(textureResource_, &srvDesc, srvHandleCPU_);
 }
 
-// ============================================================================================
 DirectX::ScratchImage DirectXCommon::LoadTextrue(const std::string& filePath){
 	DirectX::ScratchImage image{};
 	std::wstring filePathW = ConvertWString(filePath);

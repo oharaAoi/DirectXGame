@@ -42,6 +42,15 @@ ID3D12DescriptorHeap* CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTO
 ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes);
 
 /// <summary>
+/// 深度情報を格納するリソースの生成
+/// </summary>
+/// <param name="device"></param>
+/// <param name="width"></param>
+/// <param name="height"></param>
+/// <returns></returns>
+ID3D12Resource* CreateDepthStencilTextureResource(ID3D12Device* device, int32_t width, int32_t height);
+
+/// <summary>
 /// ログを出す
 /// </summary>
 /// <param name="message"></param>

@@ -109,6 +109,11 @@ private: // メンバ変数
 	DirectX::ScratchImage mipImage_;
 	ID3D12Resource* textureResource_ = nullptr;
 	ID3D12Resource* intermediateResource_ = nullptr;
+
+	// 深度
+	ID3D12Resource* depthStencilResource_ = nullptr;
+
+	ID3D12DescriptorHeap* dsvDescriptorHeap_ = nullptr;
 	
 public: // メンバ関数
 	DirectXCommon() = default;
