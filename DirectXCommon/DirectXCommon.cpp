@@ -5,12 +5,17 @@
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "dxcompiler.lib")
 
+#include "ImGuiManager.h"
+
 DirectXCommon* DirectXCommon::GetInstacne(){
 	static DirectXCommon instance;
 	return &instance;
 }
 
 void DirectXCommon::Finalize() {
+	transformationMatrixResorce_->Release();
+	vertexResourceSprite_->Release();
+
 	dsvDescriptorHeap_->Release();
 	depthStencilResource_->Release();
 
@@ -76,6 +81,7 @@ void DirectXCommon::Initialize(WinApp* win, int32_t backBufferWidth, int32_t bac
 
 	// -----------------------------------
 	transform_ = { {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
+	transformSprite_ = { {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
 	// -----------------------------------
 
 	// DirectXの初期化
@@ -90,6 +96,9 @@ void DirectXCommon::Initialize(WinApp* win, int32_t backBufferWidth, int32_t bac
 	CreatePSO();
 	// 頂点データの生成
 	CreateVertexResource();
+	// spriteの生成
+	CreateSprite();
+
 	// texture
 	CreateTexture();
 
@@ -383,6 +392,12 @@ void DirectXCommon::DrawCall() {
 	commandList_->DrawInstanced(6, 1, 0, 0);
 }
 
+void DirectXCommon::SpriteDraw() {
+	commandList_->IASetVertexBuffers(0, 1, &vertexBufferViewSprite_);
+	commandList_->SetGraphicsRootConstantBufferView(1, transformationMatrixResorce_->GetGPUVirtualAddress());
+	commandList_->DrawInstanced(6, 1, 0, 0);
+}
+
 //=============================================================================================================================
 //	PSOの生成
 //=============================================================================================================================
@@ -512,6 +527,50 @@ void DirectXCommon::CreateVertexResource(){
 	scissorRect_.right = static_cast<LONG>(kClientWidth_);
 	scissorRect_.top = 0;
 	scissorRect_.bottom = static_cast<LONG>(kClientHeight_);
+}
+
+//=============================================================================================================================
+//	VertexResourceSpriteの生成
+//=============================================================================================================================
+void DirectXCommon::CreateSprite() {
+	// sprite用の頂点リソースを作る ---------------------------------------------------------------------
+	vertexResourceSprite_ = CreateBufferResource(device_, sizeof(VertexData) * 6);
+
+	// 頂点バッファビューを作る
+	// 先頭のアドレスから
+	vertexBufferViewSprite_.BufferLocation = vertexResourceSprite_->GetGPUVirtualAddress();
+	// 使用するサイズは頂点6つ分
+	vertexBufferViewSprite_.SizeInBytes = sizeof(VertexData) * 6;
+	// 1頂点当たり
+	vertexBufferViewSprite_.StrideInBytes = sizeof(VertexData);
+
+	/// 頂点データを設定する ---------------------------------------------------------------------
+	VertexData* vertexDataSprite = nullptr;
+	vertexResourceSprite_->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataSprite));
+
+	// 1枚目
+	vertexDataSprite[0].pos = { 0.0f, 360.0f, 0.0f, 1.0f };
+	vertexDataSprite[0].texcord = { 0.0f, 1.0f };
+	vertexDataSprite[1].pos = { 0.0f, 0.0f, 0.0f, 1.0f, };
+	vertexDataSprite[1].texcord = { 0.0f, 0.0f };
+	vertexDataSprite[2].pos = { 640.0f, 360.0f, 0.0f, 1.0f };
+	vertexDataSprite[2].texcord = { 1.0f, 1.0f };
+
+	// 2枚目
+	vertexDataSprite[3].pos = { 0.0f, 0.0f, 0.0f, 1.0f };
+	vertexDataSprite[3].texcord = { 0.0f, 0.0f };
+	vertexDataSprite[4].pos = { 640.0f, 0.0f, 0.0f, 1.0f, };
+	vertexDataSprite[4].texcord = { 1.0f, 0.0f };
+	vertexDataSprite[5].pos = { 640.0f, 360.0f, 0.0f, 1.0f };
+	vertexDataSprite[5].texcord = { 1.0f, 1.0f };
+
+	// Transform ---------------------------------------------------------------------
+	transformationMatrixResorce_ = CreateBufferResource(device_, sizeof(Matrix4x4));
+	// アドレスを取得
+	transformationMatrixResorce_->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixData_));
+	// 単位行列を書き込んで置く
+	*transformationMatrixData_ = MakeIdentity4x4();
+
 }
 
 // ↓初期化に関するメンバ関数 ---------------------------------------------------------------------------------------------------------------------------
@@ -831,6 +890,20 @@ void DirectXCommon::CreateWVPResource(const Matrix4x4& vpMatrix){
 	Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scalel, transform_.rotate, transform_.translate);
 	Matrix4x4 wvpMatrix = Multiply(worldMatrix, vpMatrix);
 	*wvpData = wvpMatrix;
+}
+
+/// <summary>
+/// 移動用のの頂点の生成
+/// </summary>
+void DirectXCommon::CreateaWVPSpriteRespirce(){
+	ImGui::Begin("sprite");
+	ImGui::SliderFloat3("translate", &transformSprite_.translate.x, 0, 1280);
+	ImGui::End();
+	Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite_.scalel, transformSprite_.rotate, transformSprite_.translate);
+	Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
+	Matrix4x4 projectMatrixSprite = MakeOrthograhicMatrix(0.0f, 0.0f, float(kClientWidth_), float(kClientHeight_), 0.0f, 100.0f);
+	Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectMatrixSprite));
+	*transformationMatrixData_ = worldViewProjectionMatrix;
 }
 
 // ======================================================================================================================================================

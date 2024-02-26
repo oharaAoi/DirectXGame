@@ -114,6 +114,13 @@ private: // メンバ変数
 	ID3D12Resource* depthStencilResource_ = nullptr;
 
 	ID3D12DescriptorHeap* dsvDescriptorHeap_ = nullptr;
+
+	// スプライト
+	ID3D12Resource* vertexResourceSprite_ = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW vertexBufferViewSprite_{};
+	kTransform transformSprite_;
+	Matrix4x4* transformationMatrixData_ = nullptr;
+	ID3D12Resource* transformationMatrixResorce_ = nullptr;
 	
 public: // メンバ関数
 	DirectXCommon() = default;
@@ -143,6 +150,11 @@ public: // メンバ関数
 	/// 描画するコマンドを積む
 	/// </summary>
 	void DrawCall();
+
+	/// <summary>
+	/// 
+	/// </summary>
+	void SpriteDraw();
 
 public: // メンバ関数(関数内の細かい関数)
 
@@ -225,9 +237,16 @@ public: // メンバ関数(関数内の細かい関数)
 	/// </summary>
 	void CreateWVPResource(const Matrix4x4& vpMatrix);
 
-	void CreateTexture();
+	void CreateaWVPSpriteRespirce();
+
+	void CreateSprite();
 
 public: // textureにかかわるもの
+
+	/// <summary>
+/// 
+/// </summary>
+	void CreateTexture();
 
 	/// <summary>
 	/// Textrueデータを読む

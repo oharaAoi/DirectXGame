@@ -55,10 +55,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		sDirectX->BeginFrame();
 
 		sDirectX->CreateWVPResource(camera->GetVpMatrix());
+		sDirectX->CreateaWVPSpriteRespirce();
 
 		ImGui::ShowDemoWindow();
 		// 三角形の描画
 		sDirectX->DrawCall();
+		sDirectX->SpriteDraw();
 
 		imGuiManager->End();
 		imGuiManager->Draw();

@@ -329,7 +329,7 @@ Matrix4x4 MakeOrthograhicMatrix(const float& left, const float& top, const float
     result.m[2][2] = 1.0f / (farClip - nearClip);
     result.m[3][0] = (left + right) / (left - right);
     result.m[3][1] = (top + bottom) / (bottom - top);
-    result.m[3][2] = nearClip / (nearClip / farClip);
+    result.m[3][2] = nearClip / (nearClip - farClip);
     result.m[3][3] = 1;
 
     return result;
